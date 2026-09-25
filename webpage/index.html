@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Case File: Fake Job Posting Detection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1B2430; --ink2:#242F3D; --ink3:#2C3849;
+  --manila:#E8DFC7; --manila2:#DED2AE; --manila-line:#B9AD87;
+  --flag:#B8471F; --flag-soft:#E8B29A;
+  --teal:#2E7D6B; --teal-soft:#AEDCCF;
+  --gold:#C9962B;
+  --text:#EDE7D8; --text-dim:#A9AFB8; --text-dark:#241F16;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+html,body{margin:0;background:var(--ink);color:var(--text);font-family:'Source Serif 4',serif;}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){ }
+}
+.mono{font-family:'IBM Plex Mono',monospace;}
+img,svg{max-width:100%;}
+.wrap{max-width:920px;margin:0 auto;padding:0 24px;}
+.wide{overflow-x:auto;}
+
+/* header */
+header.top{border-bottom:1px solid #364152;padding:18px 0;position:sticky;top:0;background:rgba(27,36,48,.92);backdrop-filter:blur(6px);z-index:20;}
+header.top .row{display:flex;justify-content:space-between;align-items:baseline;}
+.case-no{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--gold);letter-spacing:.02em;}
+.case-title{font-size:.95rem;color:var(--text-dim);}
+
+/* hero */
+.hero{padding:54px 0 40px;}
+.hero h1{font-size:clamp(1.9rem,4.4vw,3rem);line-height:1.12;font-weight:600;margin:0 0 14px;max-width:16ch;}
+.hero p.lede{color:var(--text-dim);max-width:56ch;font-size:1.08rem;line-height:1.55;margin:0 0 34px;}
+
+.checker{background:var(--manila);color:var(--text-dark);border-radius:3px;padding:26px;box-shadow:0 18px 40px -20px rgba(0,0,0,.6);position:relative;border:1px solid var(--manila-line);}
+.checker::before{content:"EXHIBIT A — LIVE SCREENING";font-family:'IBM Plex Mono',monospace;font-size:.68rem;letter-spacing:.08em;color:#7a6f4d;position:absolute;top:-11px;left:20px;background:var(--manila);padding:0 8px;}
+.checker textarea{width:100%;min-height:120px;resize:vertical;border:1px solid var(--manila-line);border-radius:2px;background:#F6F1E0;color:var(--text-dark);font-family:'IBM Plex Mono',monospace;font-size:.86rem;padding:12px;line-height:1.5;}
+.checker textarea:focus{outline:2px solid var(--teal);outline-offset:1px;}
+.checker .actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center;}
+button.primary{background:var(--ink);color:var(--manila);border:none;padding:10px 18px;font-family:'IBM Plex Mono',monospace;font-size:.8rem;letter-spacing:.03em;border-radius:2px;cursor:pointer;}
+button.primary:hover{background:#000;}
+button.ghost{background:transparent;border:1px solid var(--manila-line);color:#5b5335;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:.78rem;border-radius:2px;cursor:pointer;}
+button.ghost:hover{background:var(--manila2);}
+
+.verdict{margin-top:20px;display:none;}
+.verdict.show{display:block;}
+.stamp{display:inline-block;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:1.05rem;letter-spacing:.06em;padding:8px 16px;border:3px solid; border-radius:3px;transform:rotate(-3deg);}
+.stamp.fraud{color:var(--flag);border-color:var(--flag);}
+.stamp.genuine{color:var(--teal);border-color:var(--teal);}
+.conf-row{margin-top:14px;font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:#5b5335;}
+.conf-bar{height:8px;background:#D9CDA5;border-radius:4px;overflow:hidden;margin-top:6px;}
+.conf-fill{height:100%;border-radius:4px;}
+.signals{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;}
+.chip{font-family:'IBM Plex Mono',monospace;font-size:.72rem;padding:3px 9px;border-radius:20px;}
+.chip.fraud{background:var(--flag-soft);color:#5a2411;}
+.chip.genuine{background:var(--teal-soft);color:#123d31;}
+
+/* sections */
+section{padding:52px 0;border-top:1px solid #364152;}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--gold);letter-spacing:.03em;margin-bottom:8px;}
+h2{font-size:1.55rem;font-weight:600;margin:0 0 8px;}
+.sec-lede{color:var(--text-dim);max-width:60ch;line-height:1.55;margin:0 0 30px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:28px;}
+@media (max-width:720px){.grid2{grid-template-columns:1fr;}}
+.card{background:var(--ink2);border:1px solid #364152;border-radius:4px;padding:20px;}
+.card h3{margin:0 0 4px;font-size:1rem;font-weight:600;}
+.card .cap{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--text-dim);margin-bottom:14px;}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:20px 0 36px;}
+.stat{font-family:'IBM Plex Mono',monospace;}
+.stat .n{font-size:1.7rem;color:var(--gold);display:block;font-weight:600;}
+.stat .l{font-size:.72rem;color:var(--text-dim);}
+
+table{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:.82rem;}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #364152;}
+th{color:var(--text-dim);font-weight:500;font-size:.72rem;letter-spacing:.03em;}
+tr.best td{color:var(--gold);}
+
+.legend{display:flex;gap:18px;font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--text-dim);margin-top:10px;}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;}
+
+.steps{list-style:none;margin:0;padding:0;counter-reset:step;}
+.steps li{counter-increment:step;padding:12px 0 12px 40px;position:relative;border-bottom:1px solid #364152;}
+.steps li::before{content:counter(step);position:absolute;left:0;top:11px;font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--gold);border:1px solid var(--gold);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.steps li b{display:block;margin-bottom:3px;}
+.steps li span{color:var(--text-dim);font-size:.92rem;}
+
+footer{padding:34px 0 60px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;font-size:.76rem;line-height:1.7;}
+footer a{color:var(--gold);}
+.stack{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;}
+.stack span{border:1px solid #364152;padding:3px 9px;border-radius:20px;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap row">
+    <div class="case-no">CASE № FJ-2026-0138</div>
+    <div class="case-title mono">Intelligent Fake Job Posting Detection</div>
+  </div>
+</header>
+
+<section class="hero wrap">
+  <h1>Can you tell a real job offer from a scam by the words alone?</h1>
+  <p class="lede">A machine-learning system trained on the real Employment Scam Aegean Dataset (EMSCAD) — 17,880 live job postings — to flag likely-fraudulent listings using TF-IDF text features and five benchmarked classifiers. Paste a posting below to see the model's own reasoning.</p>
+
+  <div class="checker">
+    <textarea id="inputText" placeholder="Paste a job description here, e.g. &quot;Earn great money fast! No aptitude test or prior experience required — click the link below to get started today, cash advance provided for training.&quot;"></textarea>
+    <div class="actions">
+      <button class="primary" onclick="analyze()">Screen this posting</button>
+      <button class="ghost" onclick="fillExample('fraud')">Try a scam example</button>
+      <button class="ghost" onclick="fillExample('real')">Try a genuine example</button>
+    </div>
+    <div class="verdict" id="verdict">
+      <span class="stamp" id="stampEl">GENUINE</span>
+      <div class="conf-row">Fraud likelihood: <span id="confPct">0%</span>
+        <div class="conf-bar"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
+      </div>
+      <div class="signals" id="signals"></div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="dataset">
+  <div class="eyebrow">01 — The Evidence</div>
+  <h2>The real EMSCAD dataset</h2>
+  <p class="sec-lede">The Employment Scam Aegean Dataset, published by the University of the Aegean, contains 17,880 real job postings collected from a live job board — only 4.8% are confirmed fraudulent, which is the real-world scale of the problem, not an artificial split.</p>
+  <div class="stat-row">
+    <div class="stat"><span class="n" id="statTotal">—</span><span class="l">real postings (EMSCAD)</span></div>
+    <div class="stat"><span class="n" id="statFraud">—</span><span class="l">fraudulent (4.8%)</span></div>
+    <div class="stat"><span class="n" id="statVocab">—</span><span class="l">TF-IDF vocabulary terms</span></div>
+    <div class="stat"><span class="n" id="statTest">—</span><span class="l">held-out test rows</span></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>Class balance</h3>
+      <div class="cap">genuine vs. fraudulent listings</div>
+      <div id="chartClass"></div>
+    </div>
+    <div class="card">
+      <h3>Posting length</h3>
+      <div class="cap">word count, genuine vs. fraudulent</div>
+      <div id="chartLen"></div>
+      <div class="legend"><span><i class="dot" style="background:var(--teal)"></i>genuine</span><span><i class="dot" style="background:var(--flag)"></i>fraudulent</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="signalsSec">
+  <div class="eyebrow">02 — The Tells</div>
+  <h2>What actually gives a scam away</h2>
+  <p class="sec-lede">Two kinds of clues turned out to matter: the words used in the listing, and simple structural metadata about the posting itself.</p>
+  <div class="grid2">
+    <div class="card">
+      <h3>Top fraud-indicating words</h3>
+      <div class="cap">from the trained model's own weights</div>
+      <div class="signals" id="fraudChips"></div>
+    </div>
+    <div class="card">
+      <h3>Top genuine-indicating words</h3>
+      <div class="cap">from the trained model's own weights</div>
+      <div class="signals" id="genuineChips"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:28px;">
+    <h3>Structural red flags</h3>
+    <div class="cap">share of postings with each attribute, by class</div>
+    <div id="chartFeat"></div>
+    <div class="legend"><span><i class="dot" style="background:var(--teal)"></i>genuine</span><span><i class="dot" style="background:var(--flag)"></i>fraudulent</span></div>
+  </div>
+</section>
+
+<section class="wrap" id="method">
+  <div class="eyebrow">03 — Method</div>
+  <h2>How the case was built</h2>
+  <ol class="steps">
+    <li><b>Clean.</b><span>Lower-cased text, stripped anonymized #URL_hash#/#EMAIL_hash# tokens, HTML entities and punctuation, and combined title, company profile, description, requirements and benefits into one field per posting.</span></li>
+    <li><b>Explore.</b><span>Checked class imbalance, posting length, and how structured flags (logo, remote, screening questions) differ between genuine and fraudulent listings.</span></li>
+    <li><b>Vectorize.</b><span>Converted cleaned text into TF-IDF features (single words, top 4,000 by frequency) so models can weigh which terms are most distinctive of fraud.</span></li>
+    <li><b>Train &amp; benchmark.</b><span>Fit five classifiers — Logistic Regression, Random Forest, Naive Bayes, Linear SVM and Gradient Boosting — on a 75/25 train/test split, class-weighted where supported.</span></li>
+    <li><b>Score.</b><span>Compared models on accuracy, precision, recall and F1, since accuracy alone is misleading on a dataset where only 4.8% of postings are fraudulent.</span></li>
+  </ol>
+</section>
+
+<section class="wrap" id="bench">
+  <div class="eyebrow">04 — The Verdict</div>
+  <h2>Benchmarking five classifiers</h2>
+  <p class="sec-lede">On imbalanced fraud data, precision and recall matter more than raw accuracy — a model that never flags fraud still scores 95%+ accuracy while catching nothing.</p>
+  <div class="wide"><table id="benchTable"></table></div>
+  <div class="card" style="margin-top:24px;">
+    <h3>Accuracy · Precision · Recall · F1</h3>
+    <div class="cap" id="benchCap">held-out test set</div>
+    <div id="chartBench"></div>
+  </div>
+  <div class="grid2" style="margin-top:24px;">
+    <div class="card">
+      <h3>Confusion matrix</h3>
+      <div class="cap" id="cmCap">best model on the test set</div>
+      <div id="chartCM"></div>
+    </div>
+    <div class="card">
+      <h3>ROC curves</h3>
+      <div class="cap">true vs. false positive rate at every threshold</div>
+      <div id="chartROC"></div>
+    </div>
+  </div>
+</section>
+
+<footer class="wrap">
+  Trained on the real EMSCAD (Employment Scam Aegean Dataset) job postings, published by the University of the Aegean and distributed via Kaggle. The in-browser checker above runs a compact re-implementation of the trained logistic-regression weights, client-side, for illustration — the benchmark table reflects the full scikit-learn models.
+  <div class="stack">
+    <span>Python</span><span>Pandas</span><span>NumPy</span><span>scikit-learn</span><span>TF-IDF</span><span>Matplotlib / Seaborn</span>
+  </div>
+</footer>
+
+<script>
+const D = {"bias":-0.631,"fraud_keywords":{"link":6.992,"aptitude":5.037,"earn":4.859,"entry":4.173,"vam":4.107,"subsea":3.954,"cash":3.952,"accountant":3.801,"money":3.755,"clerk":3.687,"requirements":3.666,"offshore":3.653,"administrative":3.624,"financing":3.592,"oil":3.59,"cruise":3.574,"type":3.522,"gas":3.474,"hospital":3.458,"rn":3.45,"aker":3.373,"engineering":3.254,"encouraged":3.083,"receptionist":2.986,"signing":2.967,"duration":2.949,"phone":2.937,"leveraging":2.847,"email":2.845,"income":2.822},"genuine_keywords":{"companies":-5.629,"team":-4.747,"search":-4.098,"clients":-4.043,"digital":-3.961,"english":-3.698,"growing":-3.395,"software":-3.292,"love":-3.194,"based":-3.151,"fun":-3.13,"website":-3.086,"agency":-2.869,"valor":-2.859,"founded":-2.736,"hardware":-2.734,"startup":-2.61,"right":-2.587,"delivery":-2.563,"university":-2.525,"year":-2.517,"creative":-2.512,"non":-2.478,"exceptional":-2.465,"fast":-2.443,"brands":-2.442,"days":-2.441,"believe":-2.431,"medical":-2.421,"lift":-2.421},"benchmark":[{"model":"Linear SVM","accuracy":0.978523489932886,"precision":0.7564102564102564,"recall":0.8194444444444444,"f1":0.7866666666666666},{"model":"Logistic Regression","accuracy":0.9718120805369127,"precision":0.65625,"recall":0.875,"f1":0.75},{"model":"Random Forest","accuracy":0.978076062639821,"precision":0.9836065573770492,"recall":0.5555555555555556,"f1":0.7100591715976331},{"model":"Gradient Boosting","accuracy":0.9765100671140939,"precision":0.944,"recall":0.5462962962962963,"f1":0.6920821114369502},{"model":"Naive Bayes","accuracy":0.9668903803131991,"precision":0.9857142857142858,"recall":0.3194444444444444,"f1":0.4825174825174825}],"best_model":"Linear SVM","class_counts":{"genuine":17014,"fraudulent":866},"dataset_size":17880,"test_size":4470,"feature_rates":{"genuine":{"telecommuting":0.041,"has_company_logo":0.819,"has_questions":0.502},"fraudulent":{"telecommuting":0.074,"has_company_logo":0.327,"has_questions":0.289}},"text_len_hist":{"bins":[2.0,271.0,540.0,808.0,1077.0,1346.0,1614.0,1883.0,2152.0],"genuine":[5232,8216,2805,649,91,15,4,2],"fraudulent":[510,244,86,24,1,1,0,0]},"confusion_matrix":[[4197,57],[39,177]],"roc":{"Logistic Regression":{"fpr":[0.0,0.001,0.006,0.02,0.059,0.113,0.205,0.35,0.439,0.61,0.698,0.802,0.89,1.0],"tpr":[0.0,0.556,0.736,0.87,0.931,0.972,0.991,0.995,1.0,1.0,1.0,1.0,1.0,1.0],"auc":0.987},"Random Forest":{"fpr":[0.0,0.0,0.0,0.0,0.001,0.002,0.004,0.007,0.012,0.022,0.035,0.069,0.176,1.0],"tpr":[0.0,0.264,0.384,0.514,0.579,0.616,0.662,0.727,0.782,0.833,0.898,0.977,0.986,1.0],"auc":0.988},"Naive Bayes":{"fpr":[0.0,0.003,0.014,0.038,0.062,0.095,0.148,0.21,0.296,0.436,0.574,0.736,0.886,1.0],"tpr":[0.0,0.454,0.593,0.694,0.769,0.847,0.889,0.921,0.954,0.981,1.0,1.0,1.0,1.0],"auc":0.948},"Linear SVM":{"fpr":[0.0,0.001,0.008,0.024,0.056,0.131,0.201,0.296,0.396,0.457,0.555,0.685,0.807,1.0],"tpr":[0.0,0.667,0.782,0.875,0.94,0.977,0.981,0.981,0.995,0.995,1.0,1.0,1.0,1.0],"auc":0.985},"Gradient Boosting":{"fpr":[0.0,0.001,0.002,0.007,0.029,0.044,0.066,0.082,0.111,0.136,0.392,0.431,0.471,1.0],"tpr":[0.0,0.306,0.583,0.736,0.796,0.815,0.829,0.843,0.852,0.861,0.935,0.954,0.954,1.0],"auc":0.938}},"tfidf_vocab_size":4000,"train_size":13410};
+
+/* ---------- helpers ---------- */
+function el(id){return document.getElementById(id);}
+function svgWrap(w,h,inner){return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="overflow:visible">${inner}</svg>`;}
+
+function barChartGrouped(containerId, categories, series, opts={}){
+  const w=560,h=opts.h||220, padL=34, padB=34, padT=10, padR=6;
+  const plotW=w-padL-padR, plotH=h-padT-padB;
+  const maxV = opts.max || Math.max(...series.flatMap(s=>s.values))*1.15;
+  const groupW = plotW/categories.length;
+  const barW = groupW/(series.length+1);
+  let bars='', labels='', grid='';
+  for(let g=0;g<=4;g++){
+    const y = padT + plotH - (g/4)*plotH;
+    grid += `<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="#364152" stroke-width="1"/>`;
+    grid += `<text x="${padL-6}" y="${y+3}" text-anchor="end" font-size="9" fill="#A9AFB8" font-family="IBM Plex Mono, monospace">${(maxV*g/4).toFixed(opts.pct?1:0)}${opts.pct?'':''}</text>`;
+  }
+  categories.forEach((cat,i)=>{
+    const gx = padL + i*groupW;
+    series.forEach((s,j)=>{
+      const val = s.values[i];
+      const bh = (val/maxV)*plotH;
+      const bx = gx + j*barW + barW*0.15;
+      bars += `<rect x="${bx}" y="${padT+plotH-bh}" width="${barW*0.7}" height="${bh}" fill="${s.color}" rx="1.5"/>`;
+    });
+    labels += `<text x="${gx+groupW/2}" y="${h-10}" text-anchor="middle" font-size="9.5" fill="#EDE7D8" font-family="IBM Plex Mono, monospace">${cat}</text>`;
+  });
+  return svgWrap(w,h, grid+bars+labels+`<line x1="${padL}" y1="${padT+plotH}" x2="${w-padR}" y2="${padT+plotH}" stroke="#5b6472"/>`);
+}
+
+function heatmap2x2(vals, labels){
+  const w=260,h=220,cell=90,ox=60,oy=20;
+  const mx = Math.max(...vals.flat());
+  const col = v => {const t=v/mx; const r=Math.round(27+(184-27)*t), g=Math.round(36+(71-36)*t), b=Math.round(48+(31-48)*t); return `rgb(${r},${g},${b})`;};
+  let s='';
+  for(let r=0;r<2;r++) for(let c=0;c<2;c++){
+    const v=vals[r][c];
+    s+=`<rect x="${ox+c*cell}" y="${oy+r*cell}" width="${cell-4}" height="${cell-4}" fill="${col(v)}" rx="3"/>`;
+    s+=`<text x="${ox+c*cell+cell/2-2}" y="${oy+r*cell+cell/2+5}" text-anchor="middle" font-size="18" fill="#EDE7D8" font-family="IBM Plex Mono, monospace" font-weight="600">${v}</text>`;
+  }
+  s+=`<text x="${ox-8}" y="${oy+cell/2}" text-anchor="end" font-size="10" fill="#A9AFB8" font-family="IBM Plex Mono">Actual</text>`;
+  s+=`<text x="${ox}" y="${oy-8}" font-size="9.5" fill="#A9AFB8" font-family="IBM Plex Mono">Predicted →</text>`;
+  s+=`<text x="${ox-6}" y="${oy+cell/2+4}" text-anchor="end" font-size="9.5" fill="#A9AFB8" font-family="IBM Plex Mono">genuine</text>`;
+  s+=`<text x="${ox-6}" y="${oy+cell*1.5+4}" text-anchor="end" font-size="9.5" fill="#A9AFB8" font-family="IBM Plex Mono">fraud</text>`;
+  s+=`<text x="${ox+cell/2-2}" y="${oy-16}" text-anchor="middle" font-size="9.5" fill="#A9AFB8" font-family="IBM Plex Mono">genuine</text>`;
+  s+=`<text x="${ox+cell*1.5-2}" y="${oy-16}" text-anchor="middle" font-size="9.5" fill="#A9AFB8" font-family="IBM Plex Mono">fraud</text>`;
+  return svgWrap(w,h,s);
+}
+
+function rocChart(rocData){
+  const w=520,h=260,pad=36;
+  const colors=['#C9962B','#2E7D6B','#B8471F','#6E8FB0','#9C6ADE'];
+  let grid='', lines='', legend='';
+  for(let g=0;g<=4;g++){
+    const y=pad+(1-g/4)*(h-2*pad), x=pad+(g/4)*(w-2*pad);
+    grid+=`<line x1="${pad}" y1="${y}" x2="${w-pad}" y2="${y}" stroke="#364152"/>`;
+    grid+=`<line x1="${x}" y1="${pad}" x2="${x}" y2="${h-pad}" stroke="#2C3849"/>`;
+  }
+  grid+=`<line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${pad}" stroke="#4a5568" stroke-dasharray="3,3"/>`;
+  let i=0, ly=pad;
+  for(const [name,d] of Object.entries(rocData)){
+    const pts = d.fpr.map((f,idx)=>{
+      const x=pad+f*(w-2*pad), y=pad+(1-d.tpr[idx])*(h-2*pad);
+      return `${x},${y}`;
+    }).join(' ');
+    lines+=`<polyline points="${pts}" fill="none" stroke="${colors[i%colors.length]}" stroke-width="2"/>`;
+    legend+=`<text x="${w-pad-6}" y="${ly+=13}" text-anchor="end" font-size="9" fill="${colors[i%colors.length]}" font-family="IBM Plex Mono">${name} · AUC ${d.auc.toFixed(2)}</text>`;
+    i++;
+  }
+  return svgWrap(w,h+2, grid+lines+legend+`<text x="${pad}" y="${h+16}" font-size="9" fill="#A9AFB8" font-family="IBM Plex Mono">FPR →</text><text x="10" y="${pad}" font-size="9" fill="#A9AFB8" font-family="IBM Plex Mono">TPR</text>`);
+}
+
+/* ---------- render dataset stats ---------- */
+el('statTotal').textContent = D.dataset_size.toLocaleString();
+el('statFraud').textContent = D.class_counts.fraudulent;
+el('statVocab').textContent = D.tfidf_vocab_size;
+el('statTest').textContent = D.test_size.toLocaleString();
+el('benchCap').textContent = `held-out test set, ${D.test_size.toLocaleString()} postings`;
+
+el('chartClass').innerHTML = barChartGrouped('chartClass', ['Genuine','Fraudulent'],
+  [{name:'count',color:'#2E7D6B',values:[D.class_counts.genuine, D.class_counts.fraudulent]}],
+  {h:180});
+
+const lenCats = D.text_len_hist.bins.slice(0,-1).map((b,i)=>Math.round(b));
+el('chartLen').innerHTML = barChartGrouped('chartLen', lenCats,
+  [{name:'genuine',color:'#2E7D6B',values:D.text_len_hist.genuine},
+   {name:'fraudulent',color:'#B8471F',values:D.text_len_hist.fraudulent}], {h:200});
+
+el('chartFeat').innerHTML = barChartGrouped('chartFeat', ['Telecommuting','Has logo','Has questions'],
+  [{name:'genuine',color:'#2E7D6B',values:[D.feature_rates.genuine.telecommuting,D.feature_rates.genuine.has_company_logo,D.feature_rates.genuine.has_questions]},
+   {name:'fraudulent',color:'#B8471F',values:[D.feature_rates.fraudulent.telecommuting,D.feature_rates.fraudulent.has_company_logo,D.feature_rates.fraudulent.has_questions]}],
+  {h:210, max:1, pct:true});
+
+/* keyword chips */
+function topChips(obj, containerId, cls, n=14){
+  const entries = Object.entries(obj).slice(0,n);
+  el(containerId).innerHTML = entries.map(([w])=>`<span class="chip ${cls}">${w}</span>`).join('');
+}
+topChips(D.fraud_keywords,'fraudChips','fraud');
+topChips(D.genuine_keywords,'genuineChips','genuine');
+
+/* benchmark table */
+const rows = D.benchmark.map(r=>{
+  const best = r.model===D.best_model ? 'class="best"':'';
+  return `<tr ${best}><td>${r.model}${r.model===D.best_model?' ★':''}</td><td>${(r.accuracy*100).toFixed(1)}%</td><td>${(r.precision*100).toFixed(1)}%</td><td>${(r.recall*100).toFixed(1)}%</td><td>${(r.f1*100).toFixed(1)}%</td></tr>`;
+}).join('');
+el('benchTable').innerHTML = `<tr><th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1-score</th></tr>${rows}`;
+
+el('chartBench').innerHTML = barChartGrouped('chartBench', D.benchmark.map(r=>r.model.replace(' ','\\n')),
+  [{name:'acc',color:'#6E8FB0',values:D.benchmark.map(r=>r.accuracy)},
+   {name:'prec',color:'#C9962B',values:D.benchmark.map(r=>r.precision)},
+   {name:'rec',color:'#2E7D6B',values:D.benchmark.map(r=>r.recall)},
+   {name:'f1',color:'#B8471F',values:D.benchmark.map(r=>r.f1)}],
+  {h:230, max:1});
+
+el('cmCap').textContent = `${D.best_model} on the test set`;
+el('chartCM').innerHTML = heatmap2x2(D.confusion_matrix);
+el('chartROC').innerHTML = rocChart(D.roc);
+
+/* ---------- live checker ---------- */
+function clean(text){
+  return text.toLowerCase().replace(/[^a-z\s]/g,' ').replace(/\s+/g,' ').trim().split(' ').filter(Boolean);
+}
+function analyze(){
+  const text = el('inputText').value;
+  if(!text.trim()) return;
+  const words = new Set(clean(text));
+  let score = D.bias;
+  let matched = [];
+  for(const [w,coef] of Object.entries(D.fraud_keywords)) if(words.has(w)){score+=coef; matched.push({w,coef});}
+  for(const [w,coef] of Object.entries(D.genuine_keywords)) if(words.has(w)){score+=coef; matched.push({w,coef});}
+  const prob = 1/(1+Math.exp(-score));
+  const isFraud = prob>=0.5;
+  el('verdict').classList.add('show');
+  const stamp = el('stampEl');
+  stamp.textContent = isFraud ? 'LIKELY FRAUDULENT' : 'LIKELY GENUINE';
+  stamp.className = 'stamp '+(isFraud?'fraud':'genuine');
+  el('confPct').textContent = (prob*100).toFixed(1)+'%';
+  const fill = el('confFill');
+  fill.style.width = (prob*100).toFixed(0)+'%';
+  fill.style.background = isFraud ? 'var(--flag)':'var(--teal)';
+  matched.sort((a,b)=>Math.abs(b.coef)-Math.abs(a.coef));
+  el('signals').innerHTML = matched.slice(0,10).map(m=>
+    `<span class="chip ${m.coef>0?'fraud':'genuine'}">${m.w}</span>`).join('') || '<span class="chip genuine">no strong signals matched — treated as neutral</span>';
+}
+function fillExample(kind){
+  el('inputText').value = kind==='fraud'
+    ? "Earn great money fast working from home! We urgently need administrative clerks and accountants, no aptitude test or prior experience required. Click the link below to get started today, cash advance provided for training."
+    : "Our growing software team is looking for an engineer to join us. We partner with clients across many companies to deliver great digital products for a fast-growing agency founded five years ago. Fluent English and a university degree preferred.";
+  analyze();
+}
+</script>
+</body>
+</html>
